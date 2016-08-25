@@ -1,4 +1,3 @@
-
 namespace Nop.Plugin.Payments.eWayHosted
 {
     public class TransactionRequestResult

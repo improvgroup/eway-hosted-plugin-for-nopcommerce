@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Web.Mvc;
 using Nop.Core;
-using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
 using Nop.Plugin.Payments.eWayHosted.Models;
 using Nop.Services.Configuration;
@@ -39,11 +38,13 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
         [ChildActionOnly]
         public ActionResult Configure()
         {
-            var model = new ConfigurationModel();
-            model.CustomerId = _eWayHostedPaymentSettings.CustomerId;
-            model.Username = _eWayHostedPaymentSettings.Username;
-            model.PaymentPage = _eWayHostedPaymentSettings.PaymentPage;
-            model.AdditionalFee = _eWayHostedPaymentSettings.AdditionalFee;
+            var model = new ConfigurationModel
+            {
+                CustomerId = _eWayHostedPaymentSettings.CustomerId,
+                Username = _eWayHostedPaymentSettings.Username,
+                PaymentPage = _eWayHostedPaymentSettings.PaymentPage,
+                AdditionalFee = _eWayHostedPaymentSettings.AdditionalFee
+            };
 
             return View("~/Plugins/Payments.eWayHosted/Views/PaymenteWayHosted/Configure.cshtml", model);
         }
@@ -69,8 +70,7 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
         [ChildActionOnly]
         public ActionResult PaymentInfo()
         {
-            var model = new PaymentInfoModel();
-            return View("~/Plugins/Payments.eWayHosted/Views/PaymenteWayHosted/PaymentInfo.cshtml", model);
+            return View("~/Plugins/Payments.eWayHosted/Views/PaymenteWayHosted/PaymentInfo.cshtml");
         }
 
         [NonAction]
@@ -96,41 +96,35 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
                 !processor.IsPaymentMethodActive(_paymentSettings) || !processor.PluginDescriptor.Installed)
                 throw new NopException("eWayHosted module cannot be loaded");
 
-            string accessPaymentCode = string.Empty;
+            var accessPaymentCode = string.Empty;
             if (form["AccessPaymentCode"] != null)
                 accessPaymentCode = Request.Form["AccessPaymentCode"];
-
-
 
             //get the result of the transaction based on the unique payment code
             var validationResult = processor.CheckAccessCode(accessPaymentCode);
 
-
-            if (!String.IsNullOrEmpty(validationResult.ErrorMessage))
+            if (!string.IsNullOrEmpty(validationResult.ErrorMessage))
             {
                 //failed
                 return RedirectToAction("Index", "Home", new { area = "" });
             }
 
-            if (String.IsNullOrEmpty(validationResult.TrxnStatus) || !validationResult.TrxnStatus.ToLower().Equals("true"))
+            if (string.IsNullOrEmpty(validationResult.TrxnStatus) ||
+                !validationResult.TrxnStatus.ToLower().Equals("true"))
             {
                 //failed
-                return RedirectToAction("Index", "Home", new {area = ""});
+                return RedirectToAction("Index", "Home", new { area = "" });
             }
-            int orderId = Convert.ToInt32(validationResult.MerchnatOption1);
-            Order order = _orderService.GetOrderById(orderId);
-            if (order != null)
+            var orderId = Convert.ToInt32(validationResult.MerchnatOption1);
+            var order = _orderService.GetOrderById(orderId);
+            if (order == null) return RedirectToAction("Index", "Home", new { area = "" });
+
+            if (_orderProcessingService.CanMarkOrderAsPaid(order))
             {
-                if (_orderProcessingService.CanMarkOrderAsPaid(order))
-                {
-                    _orderProcessingService.MarkOrderAsPaid(order);
-                }
-                return RedirectToRoute("CheckoutCompleted", new { orderId = order.Id });
+                _orderProcessingService.MarkOrderAsPaid(order);
             }
-            else
-            {
-                return RedirectToAction("Index", "Home", new {area = ""});
-            }
+
+            return RedirectToRoute("CheckoutCompleted", new { orderId = order.Id });
         }
     }
 }

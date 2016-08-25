@@ -59,12 +59,9 @@ namespace Nop.Plugin.Payments.eWayHosted
         /// <returns>Formated value for the URL</returns>
         private string Format(string fieldName, string value)
         {
-            if (!string.IsNullOrEmpty(value))
-                return "&" + fieldName + "=" + value;
-            else
-                return "";
+            return string.IsNullOrEmpty(value) ? string.Empty : string.Format("&{0}={1}", fieldName, value);
         }
-        
+
         /// <summary>
         /// Parse the result of the transaction request and save the appropriate fields in an object to be used later
         /// </summary>
@@ -72,43 +69,44 @@ namespace Nop.Plugin.Payments.eWayHosted
         /// <returns></returns>
         private TransactionRequestResult ParseRequestResults(string xml)
         {
-            string _currentNode;
-            var _sr = new StringReader(xml);
-            var _xtr = new XmlTextReader(_sr);
-            _xtr.XmlResolver = null;
-            _xtr.WhitespaceHandling = WhitespaceHandling.None;
+            var sr = new StringReader(xml);
+            var xtr = new XmlTextReader(sr)
+            {
+                XmlResolver = null,
+                WhitespaceHandling = WhitespaceHandling.None
+            };
 
             // get the root node
-            _xtr.Read();
+            xtr.Read();
 
             var res = new TransactionRequestResult();
 
-            if ((_xtr.NodeType == XmlNodeType.Element) && (_xtr.Name == "TransactionRequest"))
+            if ((xtr.NodeType != XmlNodeType.Element) || (xtr.Name != "TransactionRequest"))
+                return res;
+
+            while (xtr.Read())
             {
-                while (_xtr.Read())
+                if ((xtr.NodeType != XmlNodeType.Element) || xtr.IsEmptyElement)
+                    continue;
+
+                var currentNode = xtr.Name;
+                xtr.Read();
+                if (xtr.NodeType != XmlNodeType.Text)
+                    continue;
+
+                switch (currentNode)
                 {
-                    if ((_xtr.NodeType == XmlNodeType.Element) && (!_xtr.IsEmptyElement))
-                    {
-                        _currentNode = _xtr.Name;
-                        _xtr.Read();
-                        if (_xtr.NodeType == XmlNodeType.Text)
-                        {
-                            switch (_currentNode)
-                            {
-                                case "Result":
-                                    res.Result = bool.Parse(_xtr.Value);
-                                    break;
+                    case "Result":
+                        res.Result = bool.Parse(xtr.Value);
+                        break;
 
-                                case "URI":
-                                    res.Uri = _xtr.Value;
-                                    break;
+                    case "URI":
+                        res.Uri = xtr.Value;
+                        break;
 
-                                case "Error":
-                                    res.Error = _xtr.Value;
-                                    break;
-                            }
-                        }
-                    }
+                    case "Error":
+                        res.Error = xtr.Value;
+                        break;
                 }
             }
 
@@ -122,88 +120,85 @@ namespace Nop.Plugin.Payments.eWayHosted
         private ValdiationRequestResult ParseXmlResult(string resultXml)
         {
             var result = new ValdiationRequestResult();
-            string _currentNode;
-            var _sr = new StringReader(resultXml);
-            var _xtr = new XmlTextReader(_sr);
-            _xtr.XmlResolver = null;
-            _xtr.WhitespaceHandling = WhitespaceHandling.None;
+            string currentNode;
+            var sr = new StringReader(resultXml);
+            var xtr = new XmlTextReader(sr)
+            {
+                XmlResolver = null,
+                WhitespaceHandling = WhitespaceHandling.None
+            };
 
             // get the root node
-            _xtr.Read();
+            xtr.Read();
 
-            if ((_xtr.NodeType == XmlNodeType.Element) && (_xtr.Name == "TransactionResponse"))
+            if ((xtr.NodeType == XmlNodeType.Element) && (xtr.Name == "TransactionResponse"))
             {
-                while (_xtr.Read())
+                while (xtr.Read())
                 {
-                    if ((_xtr.NodeType == XmlNodeType.Element) && (!_xtr.IsEmptyElement))
+                    if ((xtr.NodeType != XmlNodeType.Element) || xtr.IsEmptyElement)
+                        continue;
+
+                    currentNode = xtr.Name;
+                    xtr.Read();
+                    if (xtr.NodeType != XmlNodeType.Text)
+                        continue;
+
+                    switch (currentNode)
                     {
-                        _currentNode = _xtr.Name;
-                        _xtr.Read();
-                        if (_xtr.NodeType == XmlNodeType.Text)
-                        {
-                            switch (_currentNode)
-                            {
-
-                                case "AuthCode":
-                                    result.AuthCode = _xtr.Value;
-                                    break;
-                                case "ResponseCode":
-                                    result.ResponseCode = _xtr.Value;
-                                    break;
-                                case "ReturnAmount":
-                                    result.ReturnAmount = _xtr.Value;
-                                    break;
-                                case "TrxnStatus":
-                                    result.TrxnStatus = _xtr.Value;
-                                    break;
-                                case "TrxnNumber":
-                                    result.TrxnNumber = _xtr.Value;
-                                    break;
-                                case "MerchantOption1":
-                                    result.MerchnatOption1 = _xtr.Value;
-                                    break;
-                                case "MerchantOption2":
-                                    result.MerchnatOption2 = _xtr.Value;
-                                    break;
-                                case "MerchantOption3":
-                                    result.MerchnatOption3 = _xtr.Value;
-                                    break;
-                                case "MerchantInvoice":
-                                    result.ReferenceInvoice = _xtr.Value;
-                                    break;
-                                case "MerchantReference":
-                                    result.ReferenceNumber = _xtr.Value;
-                                    break;
-                                case "TrxnResponseMessage":
-                                    result.TrxnResponseMessage = _xtr.Value;
-                                    break;
-                                case "ErrorMessage":
-                                    result.ErrorMessage = _xtr.Value;
-                                    break;
-
-                            }
-                        }
+                        case "AuthCode":
+                            result.AuthCode = xtr.Value;
+                            break;
+                        case "ResponseCode":
+                            result.ResponseCode = xtr.Value;
+                            break;
+                        case "ReturnAmount":
+                            result.ReturnAmount = xtr.Value;
+                            break;
+                        case "TrxnStatus":
+                            result.TrxnStatus = xtr.Value;
+                            break;
+                        case "TrxnNumber":
+                            result.TrxnNumber = xtr.Value;
+                            break;
+                        case "MerchantOption1":
+                            result.MerchnatOption1 = xtr.Value;
+                            break;
+                        case "MerchantOption2":
+                            result.MerchnatOption2 = xtr.Value;
+                            break;
+                        case "MerchantOption3":
+                            result.MerchnatOption3 = xtr.Value;
+                            break;
+                        case "MerchantInvoice":
+                            result.ReferenceInvoice = xtr.Value;
+                            break;
+                        case "MerchantReference":
+                            result.ReferenceNumber = xtr.Value;
+                            break;
+                        case "TrxnResponseMessage":
+                            result.TrxnResponseMessage = xtr.Value;
+                            break;
+                        case "ErrorMessage":
+                            result.ErrorMessage = xtr.Value;
+                            break;
                     }
                 }
             }
-            else if ((_xtr.NodeType == XmlNodeType.Element) && (_xtr.Name == "TransactionRequest"))
+            else if ((xtr.NodeType == XmlNodeType.Element) && (xtr.Name == "TransactionRequest"))
             {
-                while (_xtr.Read())
+                while (xtr.Read())
                 {
-                    if ((_xtr.NodeType == XmlNodeType.Element) && (!_xtr.IsEmptyElement))
-                    {
-                        _currentNode = _xtr.Name;
-                        _xtr.Read();
-                        if (_xtr.NodeType == XmlNodeType.Text)
-                        {
-                            switch (_currentNode)
-                            {
-                                case "Error":
-                                    result.ErrorMessage = _xtr.Value;
-                                    break;
+                    if ((xtr.NodeType != XmlNodeType.Element) || xtr.IsEmptyElement)
+                        continue;
 
-                            }
-                        }
+                    currentNode = xtr.Name;
+                    xtr.Read();
+                    if (xtr.NodeType != XmlNodeType.Text)
+                        continue;
+
+                    if (currentNode == "Error")
+                    {
+                        result.ErrorMessage = xtr.Value;
                     }
                 }
             }
@@ -221,8 +216,7 @@ namespace Nop.Plugin.Payments.eWayHosted
         /// <returns>Process payment result</returns>
         public ProcessPaymentResult ProcessPayment(ProcessPaymentRequest processPaymentRequest)
         {
-            var result = new ProcessPaymentResult();
-            result.NewPaymentStatus = PaymentStatus.Pending;
+            var result = new ProcessPaymentResult { NewPaymentStatus = PaymentStatus.Pending };
             return result;
         }
 
@@ -232,12 +226,11 @@ namespace Nop.Plugin.Payments.eWayHosted
         /// <param name="postProcessPaymentRequest">Payment info required for an order processing</param>
         public void PostProcessPayment(PostProcessPaymentRequest postProcessPaymentRequest)
         {
-            string strPost = "CustomerID=" + _eWayHostedPaymentSettings.CustomerId;
+            var strPost = "CustomerID=" + _eWayHostedPaymentSettings.CustomerId;
             strPost += Format("UserName", _eWayHostedPaymentSettings.Username);
             //send amounts to the generator in DOLLAR FORM. ie 10.05
             strPost += Format("Amount", postProcessPaymentRequest.Order.OrderTotal.ToString("0.00", CultureInfo.InvariantCulture));
             strPost += Format("Currency", _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId).CurrencyCode);
-
 
             // supported languages: 
             // "EN" - English
@@ -250,9 +243,9 @@ namespace Nop.Plugin.Payments.eWayHosted
             strPost += Format("CustomerLastName", postProcessPaymentRequest.Order.BillingAddress.LastName);
             strPost += Format("CustomerAddress", postProcessPaymentRequest.Order.BillingAddress.Address1);
             strPost += Format("CustomerCity", postProcessPaymentRequest.Order.BillingAddress.City);
-            strPost += Format("CustomerState", postProcessPaymentRequest.Order.BillingAddress.StateProvince != null ? postProcessPaymentRequest.Order.BillingAddress.StateProvince.Name : "");
+            strPost += Format("CustomerState", postProcessPaymentRequest.Order.BillingAddress.StateProvince != null ? postProcessPaymentRequest.Order.BillingAddress.StateProvince.Name : string.Empty);
             strPost += Format("CustomerPostCode", postProcessPaymentRequest.Order.BillingAddress.ZipPostalCode);
-            strPost += Format("CustomerCountry", postProcessPaymentRequest.Order.BillingAddress.Country != null ?postProcessPaymentRequest.Order.BillingAddress.Country.Name : "");
+            strPost += Format("CustomerCountry", postProcessPaymentRequest.Order.BillingAddress.Country != null ? postProcessPaymentRequest.Order.BillingAddress.Country.Name : string.Empty);
             strPost += Format("CustomerEmail", postProcessPaymentRequest.Order.BillingAddress.Email);
             strPost += Format("CustomerPhone", postProcessPaymentRequest.Order.BillingAddress.PhoneNumber);
             strPost += Format("InvoiceDescription", postProcessPaymentRequest.Order.Id.ToString());
@@ -263,7 +256,7 @@ namespace Nop.Plugin.Payments.eWayHosted
             strPost += Format("MerchantInvoice", postProcessPaymentRequest.Order.Id.ToString());
             strPost += Format("MerchantOption1", postProcessPaymentRequest.Order.Id.ToString());
 
-            string url = _eWayHostedPaymentSettings.PaymentPage + "Request?" + strPost;
+            var url = _eWayHostedPaymentSettings.PaymentPage + "Request?" + strPost;
 
             var objRequest = (HttpWebRequest)WebRequest.Create(url);
             objRequest.Method = WebRequestMethods.Http.Get;
@@ -271,7 +264,8 @@ namespace Nop.Plugin.Payments.eWayHosted
             var objResponse = (HttpWebResponse)objRequest.GetResponse();
 
             //get the response from the transaction generate page
-            string resultXml = "";
+            string resultXml;
+
             using (var sr = new StreamReader(objResponse.GetResponseStream()))
             {
                 resultXml = sr.ReadToEnd();
@@ -394,10 +388,7 @@ namespace Nop.Plugin.Payments.eWayHosted
                 return false;
 
             //let's ensure that at least 1 minute passed after order is placed
-            if ((DateTime.UtcNow - order.CreatedOnUtc).TotalMinutes < 1)
-                return false;
-
-            return true;
+            return !((DateTime.UtcNow - order.CreatedOnUtc).TotalMinutes < 1);
         }
 
         /// <summary>
@@ -438,7 +429,7 @@ namespace Nop.Plugin.Payments.eWayHosted
                 CustomerId = "87654321",
                 Username = "TestAccount",
                 PaymentPage = "https://payment.ewaygateway.com/",
-                AdditionalFee= 0,
+                AdditionalFee = 0
             };
             _settingService.SaveSetting(settings);
 
@@ -456,7 +447,6 @@ namespace Nop.Plugin.Payments.eWayHosted
             base.Install();
         }
 
-
         public override void Uninstall()
         {
             //locales
@@ -472,6 +462,7 @@ namespace Nop.Plugin.Payments.eWayHosted
             
             base.Uninstall();
         }
+
         /// <summary>
         /// Procedure to check the 64 character access payment code
         /// for security
@@ -481,15 +472,15 @@ namespace Nop.Plugin.Payments.eWayHosted
         public ValdiationRequestResult CheckAccessCode(string accessPaymentCode)
         {
             //POST to Payment gateway the access code returned
-            string strPost = "CustomerID=" + _eWayHostedPaymentSettings.CustomerId;
+            var strPost = "CustomerID=" + _eWayHostedPaymentSettings.CustomerId;
             strPost += Format("AccessPaymentCode", accessPaymentCode);
             strPost += Format("UserName", _eWayHostedPaymentSettings.Username);
 
-            string url = _eWayHostedPaymentSettings.PaymentPage + "Result?" + strPost;
+            var url = _eWayHostedPaymentSettings.PaymentPage + "Result?" + strPost;
 
             var objRequest = (HttpWebRequest)WebRequest.Create(url);
             objRequest.Method = WebRequestMethods.Http.Get;
-            string resultXml = "";
+            string resultXml;
 
             try
             {
