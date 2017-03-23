@@ -31,6 +31,7 @@ namespace Nop.Plugin.Payments.eWayHosted
         private readonly ICurrencyService _currencyService;
         private readonly CurrencySettings _currencySettings;
         private readonly IWebHelper _webHelper;
+        private readonly ILocalizationService _localizationService;
 
         #endregion
 
@@ -38,13 +39,15 @@ namespace Nop.Plugin.Payments.eWayHosted
 
         public eWayHostedPaymentProcessor(eWayHostedPaymentSettings eWayHostedPaymentSettings,
             ISettingService settingService, ICurrencyService currencyService,
-            CurrencySettings currencySettings, IWebHelper webHelper)
+            CurrencySettings currencySettings, IWebHelper webHelper,
+            ILocalizationService localizationService)
         {
             this._eWayHostedPaymentSettings = eWayHostedPaymentSettings;
             this._settingService = settingService;
             this._currencyService = currencyService;
             this._currencySettings = currencySettings;
             this._webHelper = webHelper;
+            this._localizationService = localizationService;
         }
 
         #endregion
@@ -249,8 +252,8 @@ namespace Nop.Plugin.Payments.eWayHosted
             strPost += Format("CustomerEmail", postProcessPaymentRequest.Order.BillingAddress.Email);
             strPost += Format("CustomerPhone", postProcessPaymentRequest.Order.BillingAddress.PhoneNumber);
             strPost += Format("InvoiceDescription", postProcessPaymentRequest.Order.Id.ToString());
-            strPost += Format("CancelURL", _webHelper.GetStoreLocation(false) + "Plugins/PaymenteWayHosted/MerchantReturn");
-            strPost += Format("ReturnUrl", _webHelper.GetStoreLocation(false) + "Plugins/PaymenteWayHosted/MerchantReturn");
+            strPost += Format("CancelURL", _webHelper.GetStoreLocation() + "Plugins/PaymenteWayHosted/MerchantReturn");
+            strPost += Format("ReturnUrl", _webHelper.GetStoreLocation() + "Plugins/PaymenteWayHosted/MerchantReturn");
 
             strPost += Format("MerchantReference", postProcessPaymentRequest.Order.Id.ToString());
             strPost += Format("MerchantInvoice", postProcessPaymentRequest.Order.Id.ToString());
@@ -401,7 +404,7 @@ namespace Nop.Plugin.Payments.eWayHosted
         {
             actionName = "Configure";
             controllerName = "PaymenteWayHosted";
-            routeValues = new RouteValueDictionary() { { "Namespaces", "Nop.Plugin.Payments.eWayHosted.Controllers" }, { "area", null } };
+            routeValues = new RouteValueDictionary { { "Namespaces", "Nop.Plugin.Payments.eWayHosted.Controllers" }, { "area", null } };
         }
 
         /// <summary>
@@ -414,7 +417,7 @@ namespace Nop.Plugin.Payments.eWayHosted
         {
             actionName = "PaymentInfo";
             controllerName = "PaymenteWayHosted";
-            routeValues = new RouteValueDictionary() { { "Namespaces", "Nop.Plugin.Payments.eWayHosted.Controllers" }, { "area", null } };
+            routeValues = new RouteValueDictionary { { "Namespaces", "Nop.Plugin.Payments.eWayHosted.Controllers" }, { "area", null } };
         }
 
         public Type GetControllerType()
@@ -443,6 +446,7 @@ namespace Nop.Plugin.Payments.eWayHosted
             this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage.Hint", "Enter payment page.");
             this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee", "Additional fee");
             this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee.Hint", "Enter additional fee to charge your customers.");
+            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentMethodDescription", "You will be redirected to eWay site to complete the order.");
             
             base.Install();
         }
@@ -459,6 +463,7 @@ namespace Nop.Plugin.Payments.eWayHosted
             this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage.Hint");
             this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee");
             this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee.Hint");
+            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentMethodDescription");
             
             base.Uninstall();
         }
@@ -496,7 +501,7 @@ namespace Nop.Plugin.Payments.eWayHosted
             }
             catch (Exception exc)
             {
-                return new ValdiationRequestResult()
+                return new ValdiationRequestResult
                 {
                     ErrorMessage = exc.Message
                 };
@@ -582,6 +587,14 @@ namespace Nop.Plugin.Payments.eWayHosted
         public bool SkipPaymentInfo
         {
             get { return false; }
+        }
+
+        /// <summary>
+        /// Gets a payment method description that will be displayed on checkout pages in the public store
+        /// </summary>
+        public string PaymentMethodDescription
+        {
+            get { return _localizationService.GetResource("Plugins.Payments.eWayHosted.PaymentMethodDescription"); }
         }
 
         #endregion

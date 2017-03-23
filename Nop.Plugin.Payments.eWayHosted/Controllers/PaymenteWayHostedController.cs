@@ -46,7 +46,7 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
                 AdditionalFee = _eWayHostedPaymentSettings.AdditionalFee
             };
 
-            return View("~/Plugins/Payments.eWayHosted/Views/PaymenteWayHosted/Configure.cshtml", model);
+            return View("~/Plugins/Payments.eWayHosted/Views/Configure.cshtml", model);
         }
 
         [HttpPost]
@@ -70,7 +70,7 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
         [ChildActionOnly]
         public ActionResult PaymentInfo()
         {
-            return View("~/Plugins/Payments.eWayHosted/Views/PaymenteWayHosted/PaymentInfo.cshtml");
+            return View("~/Plugins/Payments.eWayHosted/Views/PaymentInfo.cshtml");
         }
 
         [NonAction]
