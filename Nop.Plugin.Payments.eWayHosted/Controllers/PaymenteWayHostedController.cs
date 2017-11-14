@@ -1,13 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Web.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
 using Nop.Core.Domain.Payments;
 using Nop.Plugin.Payments.eWayHosted.Models;
 using Nop.Services.Configuration;
 using Nop.Services.Orders;
 using Nop.Services.Payments;
+using Nop.Web.Framework;
 using Nop.Web.Framework.Controllers;
+using Nop.Web.Framework.Mvc.Filters;
+using Nop.Services.Security;
 
 namespace Nop.Plugin.Payments.eWayHosted.Controllers
 {
@@ -19,12 +21,14 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
         private readonly IOrderProcessingService _orderProcessingService;
         private readonly eWayHostedPaymentSettings _eWayHostedPaymentSettings;
         private readonly PaymentSettings _paymentSettings;
+        private readonly IPermissionService _permissionService;
 
         public PaymenteWayHostedController(ISettingService settingService, 
             IPaymentService paymentService, IOrderService orderService, 
             IOrderProcessingService orderProcessingService,
             eWayHostedPaymentSettings eWayHostedPaymentSettings,
-            PaymentSettings paymentSettings)
+            PaymentSettings paymentSettings,
+            IPermissionService permissionService)
         {
             this._settingService = settingService;
             this._paymentService = paymentService;
@@ -32,12 +36,16 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
             this._orderProcessingService = orderProcessingService;
             this._eWayHostedPaymentSettings = eWayHostedPaymentSettings;
             this._paymentSettings = paymentSettings;
+            this._permissionService = permissionService;
         }
-        
-        [AdminAuthorize]
-        [ChildActionOnly]
-        public ActionResult Configure()
+
+        [AuthorizeAdmin]
+        [Area(AreaNames.Admin)]
+        public IActionResult Configure()
         {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManagePaymentMethods))
+                return AccessDeniedView();
+
             var model = new ConfigurationModel
             {
                 CustomerId = _eWayHostedPaymentSettings.CustomerId,
@@ -50,10 +58,13 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
         }
 
         [HttpPost]
-        [AdminAuthorize]
-        [ChildActionOnly]
-        public ActionResult Configure(ConfigurationModel model)
+        [AuthorizeAdmin]
+        [Area(AreaNames.Admin)]
+        public IActionResult Configure(ConfigurationModel model)
         {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManagePaymentMethods))
+                return AccessDeniedView();
+
             if (!ModelState.IsValid)
                 return Configure();
 
@@ -67,29 +78,10 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
             return Configure();
         }
 
-        [ChildActionOnly]
-        public ActionResult PaymentInfo()
+        public IActionResult MerchantReturn()
         {
-            return View("~/Plugins/Payments.eWayHosted/Views/PaymentInfo.cshtml");
-        }
+            var form = Request.Form;
 
-        [NonAction]
-        public override IList<string> ValidatePaymentForm(FormCollection form)
-        {
-            var warnings = new List<string>();
-            return warnings;
-        }
-
-        [NonAction]
-        public override ProcessPaymentRequest GetPaymentInfo(FormCollection form)
-        {
-            var paymentInfo = new ProcessPaymentRequest();
-            return paymentInfo;
-        }
-
-        [ValidateInput(false)]
-        public ActionResult MerchantReturn(FormCollection form)
-        {
             var processor =
                 _paymentService.LoadPaymentMethodBySystemName("Payments.eWayHosted") as eWayHostedPaymentProcessor;
             if (processor == null ||
@@ -97,8 +89,8 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
                 throw new NopException("eWayHosted module cannot be loaded");
 
             var accessPaymentCode = string.Empty;
-            if (form["AccessPaymentCode"] != null)
-                accessPaymentCode = Request.Form["AccessPaymentCode"];
+            if (form.ContainsKey("AccessPaymentCode"))
+                accessPaymentCode = form["AccessPaymentCode"];
 
             //get the result of the transaction based on the unique payment code
             var validationResult = processor.CheckAccessCode(accessPaymentCode);

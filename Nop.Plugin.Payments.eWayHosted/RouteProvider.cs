@@ -1,20 +1,19 @@
-﻿using System.Web.Mvc;
-using System.Web.Routing;
-using Nop.Web.Framework.Mvc.Routes;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using Nop.Web.Framework.Mvc.Routing;
 
 namespace Nop.Plugin.Payments.eWayHosted
 {
     public partial class RouteProvider : IRouteProvider
     {
-        public void RegisterRoutes(RouteCollection routes)
+        public void RegisterRoutes(IRouteBuilder routeBuilder)
         {
             //Merchant return
-            routes.MapRoute("Plugin.Payments.eWayHosted.MerchantReturn",
+            routeBuilder.MapRoute("Plugin.Payments.eWayHosted.MerchantReturn",
                  "Plugins/PaymenteWayHosted/MerchantReturn",
-                 new { controller = "PaymenteWayHosted", action = "MerchantReturn" },
-                 new[] { "Nop.Plugin.Payments.eWayHosted.Controllers" }
-            );
+                 new { controller = "PaymenteWayHosted", action = "MerchantReturn" });
         }
+
         public int Priority
         {
             get

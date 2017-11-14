@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
-using System.Web;
-using System.Web.Routing;
 using System.Xml;
+using Microsoft.AspNetCore.Http;
 using Nop.Core;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Orders;
@@ -32,6 +31,7 @@ namespace Nop.Plugin.Payments.eWayHosted
         private readonly CurrencySettings _currencySettings;
         private readonly IWebHelper _webHelper;
         private readonly ILocalizationService _localizationService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         #endregion
 
@@ -40,7 +40,8 @@ namespace Nop.Plugin.Payments.eWayHosted
         public eWayHostedPaymentProcessor(eWayHostedPaymentSettings eWayHostedPaymentSettings,
             ISettingService settingService, ICurrencyService currencyService,
             CurrencySettings currencySettings, IWebHelper webHelper,
-            ILocalizationService localizationService)
+            ILocalizationService localizationService,
+            IHttpContextAccessor httpContextAccessor)
         {
             this._eWayHostedPaymentSettings = eWayHostedPaymentSettings;
             this._settingService = settingService;
@@ -48,6 +49,7 @@ namespace Nop.Plugin.Payments.eWayHosted
             this._currencySettings = currencySettings;
             this._webHelper = webHelper;
             this._localizationService = localizationService;
+            this._httpContextAccessor = httpContextAccessor;
         }
 
         #endregion
@@ -62,7 +64,7 @@ namespace Nop.Plugin.Payments.eWayHosted
         /// <returns>Formated value for the URL</returns>
         private string Format(string fieldName, string value)
         {
-            return string.IsNullOrEmpty(value) ? string.Empty : string.Format("&{0}={1}", fieldName, value);
+            return string.IsNullOrEmpty(value) ? string.Empty : $"&{fieldName}={value}";
         }
 
         /// <summary>
@@ -282,7 +284,7 @@ namespace Nop.Plugin.Payments.eWayHosted
             if (resultObj.Result)
             {
                 //redirect the user to the payment page
-                HttpContext.Current.Response.Redirect(resultObj.Uri);
+                _httpContextAccessor.HttpContext.Response.Redirect(resultObj.Uri);
             }
             else
             {
@@ -381,7 +383,7 @@ namespace Nop.Plugin.Payments.eWayHosted
         public bool CanRePostProcessPayment(Order order)
         {
             if (order == null)
-                throw new ArgumentNullException("order");
+                throw new ArgumentNullException(nameof(order));
 
             //eWayHosted is the redirection payment method
             //It also validates whether order is also paid (after redirection) so customers will not be able to pay twice
@@ -394,35 +396,31 @@ namespace Nop.Plugin.Payments.eWayHosted
             return !((DateTime.UtcNow - order.CreatedOnUtc).TotalMinutes < 1);
         }
 
-        /// <summary>
-        /// Gets a route for provider configuration
-        /// </summary>
-        /// <param name="actionName">Action name</param>
-        /// <param name="controllerName">Controller name</param>
-        /// <param name="routeValues">Route values</param>
-        public void GetConfigurationRoute(out string actionName, out string controllerName, out RouteValueDictionary routeValues)
+        public override string GetConfigurationPageUrl()
         {
-            actionName = "Configure";
-            controllerName = "PaymenteWayHosted";
-            routeValues = new RouteValueDictionary { { "Namespaces", "Nop.Plugin.Payments.eWayHosted.Controllers" }, { "area", null } };
-        }
-
-        /// <summary>
-        /// Gets a route for payment info
-        /// </summary>
-        /// <param name="actionName">Action name</param>
-        /// <param name="controllerName">Controller name</param>
-        /// <param name="routeValues">Route values</param>
-        public void GetPaymentInfoRoute(out string actionName, out string controllerName, out RouteValueDictionary routeValues)
-        {
-            actionName = "PaymentInfo";
-            controllerName = "PaymenteWayHosted";
-            routeValues = new RouteValueDictionary { { "Namespaces", "Nop.Plugin.Payments.eWayHosted.Controllers" }, { "area", null } };
+            return $"{_webHelper.GetStoreLocation()}Admin/PaymenteWayHosted/Configure";
         }
 
         public Type GetControllerType()
         {
             return typeof(PaymenteWayHostedController);
+        }
+
+        public void GetPublicViewComponent(out string viewComponentName)
+        {
+            viewComponentName = "PaymenteWayHosted";
+        }
+
+        public IList<string> ValidatePaymentForm(IFormCollection form)
+        {
+            var warnings = new List<string>();
+            return warnings;
+        }
+
+        public ProcessPaymentRequest GetPaymentInfo(IFormCollection form)
+        {
+            var paymentInfo = new ProcessPaymentRequest();
+            return paymentInfo;
         }
 
         public override void Install()
