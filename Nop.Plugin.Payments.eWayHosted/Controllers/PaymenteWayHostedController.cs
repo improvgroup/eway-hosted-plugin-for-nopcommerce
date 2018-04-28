@@ -78,9 +78,9 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
             return Configure();
         }
 
-        public IActionResult MerchantReturn()
+        public IActionResult MerchantReturn(IpnModel model)
         {
-            var form = Request.Form;
+            var form = model.Form;
 
             var processor =
                 _paymentService.LoadPaymentMethodBySystemName("Payments.eWayHosted") as eWayHostedPaymentProcessor;
