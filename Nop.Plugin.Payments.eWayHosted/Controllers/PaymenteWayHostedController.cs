@@ -15,28 +15,28 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
 {
     public class PaymenteWayHostedController : BasePaymentController
     {
-        private readonly ISettingService _settingService;
-        private readonly IPaymentService _paymentService;
-        private readonly IOrderService _orderService;
-        private readonly IOrderProcessingService _orderProcessingService;
         private readonly eWayHostedPaymentSettings _eWayHostedPaymentSettings;
-        private readonly PaymentSettings _paymentSettings;
+        private readonly IOrderProcessingService _orderProcessingService;
+        private readonly IOrderService _orderService;
+        private readonly IPaymentService _paymentService;
         private readonly IPermissionService _permissionService;
+        private readonly ISettingService _settingService;
 
-        public PaymenteWayHostedController(ISettingService settingService, 
-            IPaymentService paymentService, IOrderService orderService, 
-            IOrderProcessingService orderProcessingService,
+        public PaymenteWayHostedController(
             eWayHostedPaymentSettings eWayHostedPaymentSettings,
-            PaymentSettings paymentSettings,
-            IPermissionService permissionService)
+            IOrderProcessingService orderProcessingService,
+            IOrderService orderService,
+            IPaymentService paymentService,
+            IPermissionService permissionService,
+            ISettingService settingService,
+            PaymentSettings paymentSettings)
         {
-            this._settingService = settingService;
-            this._paymentService = paymentService;
-            this._orderService = orderService;
-            this._orderProcessingService = orderProcessingService;
             this._eWayHostedPaymentSettings = eWayHostedPaymentSettings;
-            this._paymentSettings = paymentSettings;
+            this._orderProcessingService = orderProcessingService;
+            this._orderService = orderService;
+            this._paymentService = paymentService;
             this._permissionService = permissionService;
+            this._settingService = settingService;
         }
 
         [AuthorizeAdmin]
@@ -85,7 +85,7 @@ namespace Nop.Plugin.Payments.eWayHosted.Controllers
             var processor =
                 _paymentService.LoadPaymentMethodBySystemName("Payments.eWayHosted") as eWayHostedPaymentProcessor;
             if (processor == null ||
-                !processor.IsPaymentMethodActive(_paymentSettings) || !processor.PluginDescriptor.Installed)
+                !_paymentService.IsPaymentMethodActive(processor) || !processor.PluginDescriptor.Installed)
                 throw new NopException("eWayHosted module cannot be loaded");
 
             var accessPaymentCode = string.Empty;

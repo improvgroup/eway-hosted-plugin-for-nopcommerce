@@ -10,7 +10,6 @@ using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
 using Nop.Core.Plugins;
-using Nop.Plugin.Payments.eWayHosted.Controllers;
 using Nop.Services.Configuration;
 using Nop.Services.Directory;
 using Nop.Services.Localization;
@@ -25,31 +24,33 @@ namespace Nop.Plugin.Payments.eWayHosted
     {
         #region Fields
 
-        private readonly eWayHostedPaymentSettings _eWayHostedPaymentSettings;
-        private readonly ISettingService _settingService;
-        private readonly ICurrencyService _currencyService;
         private readonly CurrencySettings _currencySettings;
-        private readonly IWebHelper _webHelper;
-        private readonly ILocalizationService _localizationService;
+        private readonly eWayHostedPaymentSettings _eWayHostedPaymentSettings;
+        private readonly ICurrencyService _currencyService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILocalizationService _localizationService;
+        private readonly ISettingService _settingService;
+        private readonly IWebHelper _webHelper;
 
         #endregion
 
         #region Ctor
 
-        public eWayHostedPaymentProcessor(eWayHostedPaymentSettings eWayHostedPaymentSettings,
-            ISettingService settingService, ICurrencyService currencyService,
-            CurrencySettings currencySettings, IWebHelper webHelper,
+        public eWayHostedPaymentProcessor(CurrencySettings currencySettings,
+            eWayHostedPaymentSettings eWayHostedPaymentSettings,
+            ICurrencyService currencyService,
+            IHttpContextAccessor httpContextAccessor,
             ILocalizationService localizationService,
-            IHttpContextAccessor httpContextAccessor)
+            ISettingService settingService,
+            IWebHelper webHelper)
         {
-            this._eWayHostedPaymentSettings = eWayHostedPaymentSettings;
-            this._settingService = settingService;
-            this._currencyService = currencyService;
             this._currencySettings = currencySettings;
-            this._webHelper = webHelper;
-            this._localizationService = localizationService;
+            this._eWayHostedPaymentSettings = eWayHostedPaymentSettings;
+            this._currencyService = currencyService;
             this._httpContextAccessor = httpContextAccessor;
+            this._localizationService = localizationService;
+            this._settingService = settingService;
+            this._webHelper = webHelper;
         }
 
         #endregion
@@ -401,14 +402,9 @@ namespace Nop.Plugin.Payments.eWayHosted
             return $"{_webHelper.GetStoreLocation()}Admin/PaymenteWayHosted/Configure";
         }
 
-        public Type GetControllerType()
+        public string GetPublicViewComponentName()
         {
-            return typeof(PaymenteWayHostedController);
-        }
-
-        public void GetPublicViewComponent(out string viewComponentName)
-        {
-            viewComponentName = "PaymenteWayHosted";
+            return "PaymenteWayHosted";
         }
 
         public IList<string> ValidatePaymentForm(IFormCollection form)
@@ -429,39 +425,41 @@ namespace Nop.Plugin.Payments.eWayHosted
             {
                 CustomerId = "87654321",
                 Username = "TestAccount",
-                PaymentPage = "https://payment.ewaygateway.com/",
+                PaymentPage = "https://nz.ewaygateway.com/ ",
                 AdditionalFee = 0
             };
             _settingService.SaveSetting(settings);
 
             //locales
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.RedirectionTip", "You will be redirected to eWay site to complete the order.");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.CustomerId", "Customer ID");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.CustomerId.Hint", "Enter customer ID.");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.Username", "Username");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.Username.Hint", "Enter username.");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage", "Payment page");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage.Hint", "Enter payment page.");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee", "Additional fee");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee.Hint", "Enter additional fee to charge your customers.");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentMethodDescription", "You will be redirected to eWay site to complete the order.");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.RedirectionTip", "You will be redirected to eWay site to complete the order.");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.CustomerId", "Customer ID");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.CustomerId.Hint", "Enter customer ID.");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.Username", "Username");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.Username.Hint", "Enter username.");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage", "Payment page");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage.Hint", "Enter payment page.");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee", "Additional fee");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee.Hint", "Enter additional fee to charge your customers.");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentMethodDescription", "You will be redirected to eWay site to complete the order.");
             
             base.Install();
         }
 
         public override void Uninstall()
         {
+            _settingService.DeleteSetting<eWayHostedPaymentSettings>();
+
             //locales
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.RedirectionTip");
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.CustomerId");
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.CustomerId.Hint");
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.Username");
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.Username.Hint");
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage");
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage.Hint");
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee");
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee.Hint");
-            this.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentMethodDescription");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.RedirectionTip");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.CustomerId");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.CustomerId.Hint");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.Username");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.Username.Hint");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentPage.Hint");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.AdditionalFee.Hint");
+            _localizationService.DeletePluginLocaleResource("Plugins.Payments.eWayHosted.PaymentMethodDescription");
             
             base.Uninstall();
         }
